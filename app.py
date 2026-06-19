@@ -35,37 +35,19 @@ st.set_page_config(
 st.markdown(
     """
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
-    html, body, [class*="css"] { font-family: 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    html, body, [class*="css"] { font-family: system-ui, -apple-system, sans-serif; -webkit-font-smoothing: antialiased; }
 
     .stApp {
         background: #07080a;
         color: #fff;
-        position: relative;
     }
-    .stApp::before {
-        content: ''; position: fixed; pointer-events: none; z-index: 0;
-        width: 600px; height: 600px; border-radius: 50%;
-        background: radial-gradient(circle, rgba(0,210,255,0.04) 0%, transparent 70%);
-        top: -200px; left: -150px;
-        animation: floatA 22s ease-in-out infinite;
-    }
-    .stApp::after {
-        content: ''; position: fixed; pointer-events: none; z-index: 0;
-        width: 450px; height: 450px; border-radius: 50%;
-        background: radial-gradient(circle, rgba(100,50,255,0.03) 0%, transparent 70%);
-        bottom: -180px; right: -120px;
-        animation: floatB 28s ease-in-out infinite;
-    }
-    @keyframes floatA { 0%,100% { transform: translate(0,0); } 50% { transform: translate(50px,30px); } }
-    @keyframes floatB { 0%,100% { transform: translate(0,0); } 50% { transform: translate(-40px,-20px); } }
 
     ::selection { background: rgba(0,210,255,0.25); }
     ::-webkit-scrollbar { width: 4px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.06); border-radius: 2px; }
 
-    section[data-testid="stSidebar"] { background: rgba(8,10,14,0.9) !important; backdrop-filter: blur(28px) !important; border-right: 1px solid rgba(255,255,255,0.03) !important; }
+    section[data-testid="stSidebar"] { background: rgba(8,10,14,0.95) !important; border-right: 1px solid rgba(255,255,255,0.03) !important; }
     .sidebar-header { display: flex; align-items: center; gap: 12px; padding: 22px 16px 10px; }
     .sidebar-logo { width: 36px; height: 36px; flex-shrink: 0; filter: drop-shadow(0 0 14px rgba(0,210,255,0.2)); }
     .sidebar-title { font-size: 1.3rem; font-weight: 800; letter-spacing: -0.04em; background: linear-gradient(135deg, #A4F4FD, #00d2ff); -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent; }
@@ -74,19 +56,13 @@ st.markdown(
     .stSidebar .stButton button:hover { background: rgba(255,255,255,0.04) !important; color: #fff !important; }
     .sidebar-divider { height: 1px; background: rgba(255,255,255,0.03); margin: 6px 14px; }
 
-    .main-chat { max-width: 760px; margin: 0 auto; padding: 16px 20px; position: relative; z-index: 1; }
+    .main-chat { max-width: 760px; margin: 0 auto; padding: 16px 20px; }
 
-    .chat-hero { text-align: center; padding: 70px 20px 36px; position: relative; }
-    .chat-hero::before {
-        content: ''; position: absolute; top: 50%; left: 50%; width: 420px; height: 420px;
-        transform: translate(-50%,-50%);
-        background: radial-gradient(circle, rgba(0,210,255,0.03) 0%, transparent 70%);
-        pointer-events: none;
-    }
-    .chat-hero h1 { font-size: 3rem; font-weight: 800; letter-spacing: -0.04em; line-height: 1.05; margin: 0; position: relative; }
+    .chat-hero { text-align: center; padding: 70px 20px 36px; }
+    .chat-hero h1 { font-size: 3rem; font-weight: 800; letter-spacing: -0.04em; line-height: 1.05; margin: 0; }
     .chat-hero h1 span.gradient { background: linear-gradient(to right, #0B2551, #A4F4FD 30%, #00d2ff 50%, #A4F4FD 70%, #0B2551); background-size: 200% auto; -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent; animation: shiny 4s linear infinite; }
     @keyframes shiny { 0% { background-position: -200% center; } 100% { background-position: 200% center; } }
-    .chat-hero p { color: rgba(255,255,255,0.28); font-size: 0.86rem; margin-top: 12px; max-width: 360px; margin-left: auto; margin-right: auto; line-height: 1.65; position: relative; }
+    .chat-hero p { color: rgba(255,255,255,0.28); font-size: 0.86rem; margin-top: 12px; max-width: 360px; margin-left: auto; margin-right: auto; line-height: 1.65; }
 
     .chat-messages { display: flex; flex-direction: column; gap: 5px; padding-bottom: 10px; }
     .message-row { display: flex; align-items: flex-start; gap: 10px; animation: msgIn 0.3s ease; }
@@ -105,15 +81,15 @@ st.markdown(
     .typing-dot:nth-child(3) { animation-delay: 0.3s; }
     @keyframes dotB { 0%,60%,100% { opacity: 0.2; transform: translateY(0); } 30% { opacity: 1; transform: translateY(-3px); } }
 
-    .input-container { max-width: 760px; margin: 0 auto; padding: 6px 0 20px; position: relative; z-index: 1; }
-    .stTextInput > div { border: 1px solid rgba(255,255,255,0.05) !important; border-radius: 12px !important; background: rgba(255,255,255,0.015) !important; backdrop-filter: blur(8px) !important; transition: all 0.2s ease !important; }
+    .input-container { max-width: 760px; margin: 0 auto; padding: 6px 0 20px; }
+    .stTextInput > div { border: 1px solid rgba(255,255,255,0.05) !important; border-radius: 12px !important; background: rgba(255,255,255,0.015) !important; transition: all 0.2s ease !important; }
     .stTextInput > div:hover { border-color: rgba(255,255,255,0.1) !important; }
     .stTextInput > div:focus-within { border-color: rgba(0,210,255,0.2) !important; box-shadow: 0 0 0 3px rgba(0,210,255,0.04), 0 0 20px rgba(0,210,255,0.02) !important; }
     .stTextInput input { color: #fff !important; font-size: 0.86rem !important; padding: 10px 14px !important; }
     .stTextInput input::placeholder { color: rgba(255,255,255,0.16) !important; }
 
     .glass-card { background: rgba(255,255,255,0.01); border: 1px solid rgba(255,255,255,0.03); border-radius: 12px; position: relative; overflow: hidden; }
-    .glass-card-content { padding: 16px; position: relative; z-index: 1; }
+    .glass-card-content { padding: 16px; }
 
     .agent-status { display: flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 100px; background: rgba(0,210,255,0.04); border: 1px solid rgba(0,210,255,0.06); font-size: 0.65rem; color: rgba(255,255,255,0.4); white-space: nowrap; }
     .agent-status .pulse { width: 4px; height: 4px; border-radius: 50%; background: #00d2ff; animation: pulse 2s infinite; box-shadow: 0 0 4px rgba(0,210,255,0.3); }
