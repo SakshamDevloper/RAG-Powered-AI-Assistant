@@ -1,0 +1,1079 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aura RAG — Intelligent Knowledge Assistant</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.24.0/dist/tabler-icons.min.css">
+<style>
+:root {
+  --primary: #6366f1;
+  --primary-dark: #4f46e5;
+  --primary-glow: rgba(99,102,241,0.25);
+  --secondary: #8b5cf6;
+  --accent: #06b6d4;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --bg: #080b12;
+  --bg-alt: #0d111a;
+  --surface: #131826;
+  --surface-hover: #1a2035;
+  --surface-light: #1e2a45;
+  --border: rgba(255,255,255,0.06);
+  --border-hover: rgba(255,255,255,0.08);
+  --text: #f1f5f9;
+  --text-muted: #8892a4;
+  --text-dim: rgba(255,255,255,0.25);
+  --sidebar-w: 280px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --font: -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen,Ubuntu,sans-serif;
+  --shadow: 0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2);
+  --shadow-lg: 0 4px 20px rgba(0,0,0,0.4);
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:15px;scroll-behavior:smooth}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;display:flex;overflow:hidden;height:100vh;width:100vw;line-height:1.6;-webkit-font-smoothing:antialiased}
+img,svg{display:block}
+button{cursor:pointer;font-family:inherit}
+input,textarea{font-family:inherit}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.06);border-radius:2px}
+::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,0.1)}
+
+/* ─── SIDEBAR ─── */
+.sidebar{
+  width:var(--sidebar-w);min-width:var(--sidebar-w);height:100vh;
+  background:var(--bg-alt);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;position:relative;z-index:10;
+  transition:transform .3s cubic-bezier(.4,0,.2,1);
+}
+.sidebar-header{
+  padding:18px 16px 12px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:10px;
+}
+.sidebar-logo{
+  width:32px;height:32px;flex-shrink:0;
+  background:linear-gradient(135deg,var(--primary),var(--secondary));
+  border-radius:8px;display:flex;align-items:center;justify-content:center;
+  color:#fff;font-size:16px;font-weight:700;
+}
+.sidebar-brand{font-weight:700;font-size:1rem;letter-spacing:-.02em;color:var(--text)}
+.sidebar-brand span{color:var(--primary)}
+.sidebar-actions{padding:10px 12px}
+.btn-new-chat{
+  width:100%;padding:8px 14px;border-radius:var(--radius-sm);
+  background:var(--surface);border:1px solid var(--border);color:var(--text);
+  font-size:.85rem;display:flex;align-items:center;gap:8px;transition:all .2s;
+}
+.btn-new-chat:hover{background:var(--surface-hover);border-color:var(--border-hover)}
+.sidebar-section{padding:4px 12px 2px;font-size:.65rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:.08em;font-weight:600}
+.conversations{flex:1;overflow-y:auto;padding:4px 8px}
+.conv-item{
+  padding:9px 12px;border-radius:var(--radius-sm);cursor:pointer;
+  transition:all .15s;border:1px solid transparent;margin-bottom:2px;
+  position:relative;
+}
+.conv-item:hover{background:var(--surface);border-color:var(--border)}
+.conv-item.active{background:var(--surface);border-color:rgba(99,102,241,0.15)}
+.conv-item.active::before{content:'';position:absolute;left:0;top:8px;bottom:8px;width:2px;background:var(--primary);border-radius:1px}
+.conv-title{font-size:.82rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500}
+.conv-time{font-size:.68rem;color:var(--text-dim);margin-top:2px}
+.sidebar-footer{
+  padding:10px 12px;border-top:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.sidebar-status{display:flex;align-items:center;gap:6px;font-size:.72rem;color:var(--text-muted)}
+.sidebar-status .dot{width:5px;height:5px;border-radius:50%;background:var(--success);animation:pulse-dot 2s infinite}
+
+/* ─── MAIN ─── */
+.main{
+  flex:1;display:flex;flex-direction:column;height:100vh;overflow:hidden;
+  background:radial-gradient(ellipse at 20% 0%, rgba(99,102,241,0.03) 0%, transparent 60%),
+             radial-gradient(ellipse at 80% 100%, rgba(139,92,246,0.02) 0%, transparent 50%),
+             var(--bg);
+}
+.chat-header{
+  padding:12px 24px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;flex-shrink:0;
+  background:rgba(8,11,18,0.6);backdrop-filter:blur(12px);
+}
+.chat-header-left{display:flex;align-items:center;gap:12px}
+.chat-header-left h1{font-size:1.05rem;font-weight:600;letter-spacing:-.02em}
+.chat-header-left .model-badge{
+  font-size:.65rem;padding:2px 8px;border-radius:100px;
+  background:rgba(99,102,241,0.1);color:var(--primary);border:1px solid rgba(99,102,241,0.15);
+  font-weight:500;
+}
+.chat-header-actions{display:flex;gap:6px}
+.chat-header-actions button{
+  width:34px;height:34px;border-radius:var(--radius-sm);
+  background:transparent;border:1px solid transparent;color:var(--text-muted);
+  display:flex;align-items:center;justify-content:center;transition:all .2s;font-size:1.1rem;
+}
+.chat-header-actions button:hover{background:var(--surface);color:var(--text);border-color:var(--border)}
+
+/* ─── MESSAGES ─── */
+.messages-area{flex:1;overflow-y:auto;padding:0}
+.messages-scroll{padding:20px 24px 10px;max-width:820px;margin:0 auto;width:100%}
+
+.welcome-state{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:60px 20px 40px;text-align:center;animation:fadeUp .6s ease;
+}
+.welcome-icon{font-size:3rem;margin-bottom:16px;color:var(--primary)}
+.welcome-state h2{font-size:1.6rem;font-weight:700;letter-spacing:-.03em;margin-bottom:8px}
+.welcome-state p{color:var(--text-muted);font-size:.9rem;max-width:380px;line-height:1.7}
+.quick-grid{
+  display:grid;grid-template-columns:1fr 1fr;gap:10px;max-width:420px;margin:24px auto 0;width:100%;
+}
+.quick-card{
+  padding:14px 16px;border-radius:var(--radius-md);
+  background:var(--surface);border:1px solid var(--border);cursor:pointer;
+  text-align:left;transition:all .2s;
+  display:flex;align-items:center;gap:10px;
+}
+.quick-card:hover{background:var(--surface-hover);border-color:rgba(99,102,241,0.15);transform:translateY(-1px)}
+.quick-card .qc-icon{font-size:1.2rem}
+.quick-card .qc-text{font-size:.8rem;font-weight:500;color:var(--text)}
+.quick-card .qc-desc{font-size:.7rem;color:var(--text-muted);margin-top:1px}
+
+.msg{display:flex;gap:10px;margin-bottom:16px;animation:msgIn .35s ease;opacity:0;animation-fill-mode:forwards}
+@keyframes msgIn{0%{opacity:0;transform:translateY(8px)}100%{opacity:1;transform:translateY(0)}}
+.msg.user{flex-direction:row-reverse}
+.msg-avatar{
+  width:30px;height:30px;border-radius:50%;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:600;margin-top:2px;
+}
+.msg-avatar.ai{
+  background:linear-gradient(135deg,var(--primary),var(--secondary));
+  color:#fff;box-shadow:0 0 12px var(--primary-glow);
+}
+.msg-avatar.user-av{
+  background:var(--surface);color:var(--text-muted);border:1px solid var(--border);
+}
+.msg-bubble{max-width:72%;padding:10px 15px;border-radius:var(--radius-md);font-size:.86rem;line-height:1.65;position:relative}
+.msg.user .msg-bubble{
+  background:linear-gradient(135deg,var(--primary),var(--primary-dark));
+  color:#fff;border-bottom-right-radius:2px;
+}
+.msg.ai .msg-bubble{
+  background:var(--surface);border:1px solid var(--border);color:var(--text);
+  border-bottom-left-radius:2px;
+}
+.msg-bubble p{margin:0 0 6px}
+.msg-bubble p:last-child{margin-bottom:0}
+.msg-bubble code{background:rgba(255,255,255,0.06);padding:1px 5px;border-radius:3px;font-size:.82em}
+.msg-bubble pre{background:rgba(0,0,0,0.3);border-radius:6px;padding:10px;overflow-x:auto;border:1px solid rgba(255,255,255,0.03);margin:6px 0}
+
+.msg-actions{
+  display:flex;gap:3px;margin-top:6px;opacity:0;transition:opacity .2s;
+}
+.msg:hover .msg-actions{opacity:1}
+.msg-actions button{
+  width:26px;height:26px;border-radius:4px;border:none;background:transparent;
+  color:var(--text-dim);font-size:.78rem;display:flex;align-items:center;justify-content:center;
+  transition:all .15s;
+}
+.msg-actions button:hover{background:var(--surface-hover);color:var(--primary)}
+
+.feedback-row{display:flex;gap:6px;margin-top:4px}
+.feedback-row button{
+  width:26px;height:26px;border-radius:4px;border:none;background:transparent;
+  color:var(--text-dim);font-size:.78rem;display:flex;align-items:center;justify-content:center;transition:all .15s;
+}
+.feedback-row button:hover{background:var(--surface-hover);color:var(--primary)}
+.feedback-row button.active{color:var(--primary);background:rgba(99,102,241,0.1)}
+
+/* ─── SOURCES ─── */
+.sources-section{margin-top:8px;padding:8px 12px;border-radius:var(--radius-sm);background:rgba(255,255,255,0.01);border:1px solid var(--border)}
+.sources-title{font-size:.7rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:.05em;font-weight:600;margin-bottom:6px;display:flex;align-items:center;gap:5px}
+.source-card{
+  padding:7px 10px;border-radius:var(--radius-sm);cursor:pointer;
+  transition:all .15s;margin-bottom:3px;border:1px solid transparent;
+}
+.source-card:hover{background:var(--surface);border-color:var(--border);transform:translateX(2px)}
+.source-card:last-child{margin-bottom:0}
+.source-name{font-size:.78rem;color:var(--primary);font-weight:600}
+.source-page{font-size:.68rem;color:var(--text-dim);margin-left:5px}
+.source-snippet{font-size:.72rem;color:var(--text-muted);margin-top:1px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+
+/* ─── SUGGESTIONS ─── */
+.suggestions-section{margin-top:10px}
+.suggestions-title{font-size:.78rem;color:var(--text-dim);margin-bottom:5px}
+.suggestions-list{display:flex;flex-wrap:wrap;gap:6px}
+.suggestion-chip{
+  padding:5px 12px;border-radius:100px;border:1px solid var(--border);
+  background:transparent;color:var(--text-muted);font-size:.76rem;
+  cursor:pointer;transition:all .15s;
+}
+.suggestion-chip:hover{border-color:var(--primary);color:var(--primary);background:rgba(99,102,241,0.04)}
+
+/* ─── TYPING ─── */
+.typing-indicator{display:flex;gap:4px;padding:8px 0}
+.typing-dot{width:6px;height:6px;border-radius:50%;background:var(--primary);animation:dotB 1.2s infinite;opacity:.3}
+.typing-dot:nth-child(2){animation-delay:.15s}
+.typing-dot:nth-child(3){animation-delay:.3s}
+@keyframes dotB{0%,60%,100%{opacity:.2;transform:translateY(0)}30%{opacity:1;transform:translateY(-4px)}}
+
+/* ─── INPUT ─── */
+.input-area{
+  flex-shrink:0;border-top:1px solid var(--border);
+  padding:12px 24px 16px;
+  background:rgba(8,11,18,0.8);backdrop-filter:blur(12px);
+}
+.input-inner{max-width:820px;margin:0 auto;display:flex;gap:8px;align-items:flex-end}
+.input-wrap{
+  flex:1;position:relative;display:flex;align-items:flex-end;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius-md);transition:all .2s;
+}
+.input-wrap:focus-within{border-color:rgba(99,102,241,0.3);box-shadow:0 0 0 3px rgba(99,102,241,0.06)}
+.input-wrap textarea{
+  width:100%;background:transparent;border:none;outline:none;resize:none;
+  padding:10px 14px;color:var(--text);font-size:.86rem;line-height:1.5;
+  min-height:40px;max-height:120px;
+}
+.input-wrap textarea::placeholder{color:var(--text-dim)}
+.attach-btn{
+  width:36px;height:36px;border:none;background:transparent;
+  color:var(--text-dim);font-size:1.1rem;display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;transition:all .15s;border-radius:var(--radius-sm);
+}
+.attach-btn:hover{color:var(--text);background:var(--surface-hover)}
+.send-btn{
+  width:38px;height:38px;border:none;border-radius:var(--radius-sm);
+  background:linear-gradient(135deg,var(--primary),var(--secondary));
+  color:#fff;font-size:1.1rem;display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;transition:all .2s;box-shadow:0 0 12px var(--primary-glow);
+}
+.send-btn:hover{transform:translateY(-1px);box-shadow:0 0 20px var(--primary-glow);}
+.send-btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+
+/* ─── MODALS ─── */
+.modal-overlay{
+  position:fixed;inset:0;z-index:100;
+  background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);
+  display:flex;align-items:center;justify-content:center;
+  opacity:0;pointer-events:none;transition:opacity .25s;
+}
+.modal-overlay.open{opacity:1;pointer-events:auto}
+.modal{
+  background:var(--bg-alt);border:1px solid var(--border);border-radius:var(--radius-lg);
+  width:90%;max-width:520px;max-height:85vh;overflow-y:auto;
+  box-shadow:var(--shadow-lg);transform:scale(.95);transition:transform .25s cubic-bezier(.4,0,.2,1);
+}
+.modal-overlay.open .modal{transform:scale(1)}
+.modal-header{
+  padding:16px 20px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.modal-header h2{font-size:1rem;font-weight:600}
+.modal-close{
+  width:30px;height:30px;border-radius:6px;border:none;background:transparent;
+  color:var(--text-dim);font-size:1.2rem;display:flex;align-items:center;justify-content:center;
+  transition:all .15s;
+}
+.modal-close:hover{background:var(--surface);color:var(--text)}
+.modal-body{padding:20px}
+.form-group{margin-bottom:16px}
+.form-group label{display:block;font-size:.78rem;color:var(--text-muted);margin-bottom:4px;font-weight:500}
+.form-group input,.form-group select{
+  width:100%;padding:8px 12px;border-radius:var(--radius-sm);
+  background:var(--surface);border:1px solid var(--border);color:var(--text);
+  font-size:.85rem;transition:all .15s;
+}
+.form-group input:focus,.form-group select:focus{outline:none;border-color:rgba(99,102,241,0.3);box-shadow:0 0 0 3px rgba(99,102,241,0.06)}
+.form-group select option{background:var(--bg-alt)}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0}
+.toggle-row label{font-size:.82rem;color:var(--text);cursor:pointer}
+.toggle{position:relative;width:38px;height:22px;flex-shrink:0;cursor:pointer}
+.toggle input{opacity:0;width:0;height:0}
+.toggle-slider{
+  position:absolute;inset:0;background:var(--surface-light);border-radius:11px;transition:all .25s;
+}
+.toggle-slider::before{content:'';position:absolute;width:16px;height:16px;border-radius:50%;background:#fff;top:3px;left:3px;transition:all .25s}
+.toggle input:checked+.toggle-slider{background:var(--primary)}
+.toggle input:checked+.toggle-slider::before{transform:translateX(16px)}
+
+/* ─── TOAST ─── */
+.toast{
+  position:fixed;bottom:24px;right:24px;z-index:200;
+  padding:10px 18px;border-radius:var(--radius-sm);
+  background:var(--surface);border:1px solid var(--border);
+  color:var(--text);font-size:.82rem;box-shadow:var(--shadow-lg);
+  display:flex;align-items:center;gap:8px;
+  transform:translateY(80px);opacity:0;transition:all .35s cubic-bezier(.4,0,.2,1);
+}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.success{border-color:rgba(16,185,129,0.3)}
+.toast.success .ti{color:var(--success)}
+.toast.error{border-color:rgba(239,68,68,0.3)}
+.toast.error .ti{color:var(--danger)}
+
+/* ─── FILE UPLOAD ─── */
+.dropzone{
+  border:1px dashed var(--border);border-radius:var(--radius-md);
+  padding:30px 20px;text-align:center;cursor:pointer;transition:all .2s;
+}
+.dropzone:hover{border-color:rgba(99,102,241,0.3);background:rgba(99,102,241,0.02)}
+.dropzone .dz-icon{font-size:2rem;color:var(--primary);margin-bottom:8px}
+.dropzone p{font-size:.85rem;color:var(--text-muted)}
+.dropzone .dz-hint{font-size:.72rem;color:var(--text-dim);margin-top:4px}
+
+/* ─── RESPONSIVE ─── */
+@media(max-width:768px){
+  body{overflow:auto;height:auto}
+  .sidebar{position:fixed;left:0;top:0;z-index:50;transform:translateX(-100%)}
+  .sidebar.open{transform:translateX(0)}
+  .main{height:100dvh;min-height:100dvh}
+  .chat-header{padding:10px 14px}
+  .chat-header-left h1{font-size:.9rem}
+  .messages-scroll{padding:14px 14px 6px}
+  .msg-bubble{max-width:88%}
+  .input-area{padding:10px 14px 14px}
+  .quick-grid{grid-template-columns:1fr;max-width:100%}
+  .mobile-menu-btn{display:flex!important}
+
+  .mobile-overlay{
+    position:fixed;inset:0;z-index:40;
+    background:rgba(0,0,0,0.5);opacity:0;pointer-events:none;transition:opacity .3s;
+  }
+  .mobile-overlay.show{opacity:1;pointer-events:auto}
+}
+
+.mobile-menu-btn{display:none;width:32px;height:32px;border:none;background:transparent;color:var(--text);font-size:1.2rem;align-items:center;justify-content:center}
+
+.chat-info{font-size:.68rem;color:var(--text-dim);text-align:center;padding:4px 0 8px}
+.chat-info a{color:var(--text-muted);text-decoration:none}
+.chat-info a:hover{color:var(--primary)}
+</style>
+</head>
+<body>
+
+<div class="mobile-overlay" id="mobileOverlay" onclick="toggleSidebar()"></div>
+
+<!-- ─── SIDEBAR ─── -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <div class="sidebar-logo"><i class="ti ti-sparkles"></i></div>
+    <div class="sidebar-brand">Aura<span>RAG</span></div>
+  </div>
+  <div class="sidebar-actions">
+    <button class="btn-new-chat" onclick="newChat()"><i class="ti ti-plus"></i> New conversation</button>
+  </div>
+  <div class="sidebar-section">History</div>
+  <div class="conversations" id="convList"></div>
+  <div class="sidebar-footer">
+    <div class="sidebar-status"><span class="dot"></span> Agent online</div>
+    <button style="background:none;border:none;color:var(--text-dim);font-size:.9rem" onclick="showUpload()" title="Upload documents"><i class="ti ti-file-upload"></i></button>
+  </div>
+</aside>
+
+<!-- ─── MAIN ─── -->
+<div class="main">
+
+  <!-- Header -->
+  <header class="chat-header">
+    <div class="chat-header-left">
+      <button class="mobile-menu-btn" onclick="toggleSidebar()"><i class="ti ti-menu-2"></i></button>
+      <h1><i class="ti ti-corner-up-left" style="font-size:.85rem;color:var(--text-dim);margin-right:6px;display:none" id="backIcon"></i>AI Knowledge Assistant</h1>
+      <span class="model-badge" id="modelBadge">Hermes-3-8B</span>
+    </div>
+    <div class="chat-header-actions">
+      <button onclick="showUpload()" title="Upload documents"><i class="ti ti-upload"></i></button>
+      <button onclick="showSettings()" title="Settings"><i class="ti ti-settings"></i></button>
+      <button onclick="exportChat()" title="Export"><i class="ti ti-download"></i></button>
+    </div>
+  </header>
+
+  <!-- Messages -->
+  <div class="messages-area" id="messagesArea">
+    <div class="messages-scroll" id="messagesScroll">
+
+      <!-- Welcome -->
+      <div class="welcome-state" id="welcome">
+        <div class="welcome-icon"><i class="ti ti-sparkles"></i></div>
+        <h2>Welcome back!</h2>
+        <p>Ask me anything about your documents. I'll find the answers with context and citations.</p>
+        <div class="quick-grid">
+          <button class="quick-card" onclick="askQuick('What are the key insights from my documents?')">
+            <span class="qc-icon"><i class="ti ti-bulb"></i></span>
+            <div><div class="qc-text">Key Insights</div><div class="qc-desc">Extract main findings</div></div>
+          </button>
+          <button class="quick-card" onclick="askQuick('Summarize the main points from all documents')">
+            <span class="qc-icon"><i class="ti ti-list"></i></span>
+            <div><div class="qc-text">Summarize</div><div class="qc-desc">Concise document summary</div></div>
+          </button>
+          <button class="quick-card" onclick="askQuick('What related topics are covered in these documents?')">
+            <span class="qc-icon"><i class="ti ti-hierarchy-2"></i></span>
+            <div><div class="qc-text">Related Topics</div><div class="qc-desc">Connected themes</div></div>
+          </button>
+          <button class="quick-card" onclick="askQuick('Compare and contrast the information across documents')">
+            <span class="qc-icon"><i class="ti ti-arrows-diff"></i></span>
+            <div><div class="qc-text">Compare</div><div class="qc-desc">Cross-document analysis</div></div>
+          </button>
+        </div>
+      </div>
+
+      <!-- Messages will be rendered here -->
+      <div id="chatMessages"></div>
+
+    </div>
+  </div>
+
+  <!-- Input -->
+  <div class="input-area">
+    <div class="input-inner">
+      <div class="input-wrap">
+        <textarea id="chatInput" rows="1" placeholder="Ask anything... (Ctrl+Enter to send)" oninput="autoResize(this)" onkeydown="handleKey(event)"></textarea>
+        <button class="attach-btn" onclick="showUpload()" title="Attach files"><i class="ti ti-paperclip"></i></button>
+      </div>
+      <button class="send-btn" id="sendBtn" onclick="sendMessage()" disabled><i class="ti ti-arrow-up"></i></button>
+    </div>
+    <div class="chat-info"><a href="https://github.com/SakshamDevloper/RAG-Powered-AI-Assistant" target="_blank">Aura RAG</a> &mdash; Retrieval-Augmented Generation</div>
+  </div>
+
+</div>
+
+<!-- ─── SETTINGS MODAL ─── -->
+<div class="modal-overlay" id="settingsModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2><i class="ti ti-settings" style="margin-right:6px"></i>Settings</h2>
+      <button class="modal-close" onclick="closeSettings()"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>HuggingFace API Token</label>
+        <input type="password" id="hfToken" placeholder="hf_..." value="">
+      </div>
+      <div class="form-group">
+        <label>Model ID</label>
+        <input type="text" id="modelName" placeholder="NousResearch/Hermes-3-Llama-3.1-8B" value="NousResearch/Hermes-3-Llama-3.1-8B">
+      </div>
+      <div class="form-group">
+        <label>Search strategy</label>
+        <select id="searchType">
+          <option value="similarity">Similarity (cosine)</option>
+          <option value="mmr">MMR (diversity-aware)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Chunks to retrieve (k)</label>
+        <input type="number" id="retrievalK" value="4" min="1" max="20">
+      </div>
+      <div class="toggle-row">
+        <label>Enable re-ranking (cross-encoder)</label>
+        <label class="toggle">
+          <input type="checkbox" id="rerankToggle">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      <div class="form-group" id="rerankKGroup" style="display:none">
+        <label>Top chunks after re-ranking</label>
+        <input type="number" id="rerankK" value="4" min="1" max="10">
+      </div>
+      <button class="btn-new-chat" onclick="saveSettings()" style="margin-top:8px">Save Settings</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── UPLOAD MODAL ─── -->
+<div class="modal-overlay" id="uploadModal">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <h2><i class="ti ti-upload" style="margin-right:6px"></i>Upload Documents</h2>
+      <button class="modal-close" onclick="closeUpload()"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="dropzone" id="dropzone" onclick="document.getElementById('fileInput').click()">
+        <div class="dz-icon"><i class="ti ti-file-upload"></i></div>
+        <p>Drop files here or click to browse</p>
+        <div class="dz-hint">PDF &middot; DOCX &middot; TXT &middot; CSV</div>
+      </div>
+      <input type="file" id="fileInput" multiple accept=".pdf,.docx,.txt,.csv" style="display:none" onchange="handleFiles(this.files)">
+      <div id="uploadStatus" style="margin-top:12px;font-size:.82rem;color:var(--text-muted)"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── TOAST ─── -->
+<div class="toast" id="toast">
+  <i class="ti ti-check"></i>
+  <span id="toastMsg">Done</span>
+</div>
+
+<script>
+// ─── STATE ───
+const state = {
+  messages: [],
+  conversations: [],
+  currentConvId: null,
+  settings: {
+    hfToken: localStorage.getItem('hf_token') || '',
+    modelName: localStorage.getItem('model_name') || 'NousResearch/Hermes-3-Llama-3.1-8B',
+    searchType: localStorage.getItem('search_type') || 'similarity',
+    retrievalK: parseInt(localStorage.getItem('retrieval_k')) || 4,
+    rerankEnabled: localStorage.getItem('rerank_enabled') === 'true',
+    rerankK: parseInt(localStorage.getItem('rerank_k')) || 4,
+  },
+  isProcessing: false,
+  apiBase: window.location.port === '8765' ? '' : 'http://localhost:8765',
+  useMock: true,
+};
+
+// ─── INIT ───
+document.addEventListener('DOMContentLoaded', () => {
+  loadSettings();
+  loadConvs();
+  renderWelcome();
+  updateModelBadge();
+  checkBackend();
+});
+
+async function checkBackend() {
+  try {
+    const res = await fetch(`${state.apiBase}/api/status`);
+    if (res.ok) {
+      state.useMock = false;
+      const data = await res.json();
+      if (data.chunks > 0) document.getElementById('uploadStatus').textContent = `${data.chunks} chunks indexed`;
+    }
+  } catch { state.useMock = true; }
+}
+
+// ─── SIDEBAR ───
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('mobileOverlay').classList.toggle('show');
+}
+
+function newChat() {
+  state.messages = [];
+  state.currentConvId = crypto.randomUUID();
+  document.getElementById('chatMessages').innerHTML = '';
+  document.getElementById('welcome').style.display = 'flex';
+  document.getElementById('chatInput').value = '';
+  document.getElementById('chatInput').focus();
+}
+
+function loadConvs() {
+  const list = document.getElementById('convList');
+  if (state.conversations.length === 0) {
+    list.innerHTML = '<div style="padding:20px 12px;text-align:center;color:var(--text-dim);font-size:.78rem">No conversations yet</div>';
+    return;
+  }
+  list.innerHTML = state.conversations.map(c => `
+    <div class="conv-item${c.id === state.currentConvId ? ' active' : ''}" onclick="switchConv('${c.id}')">
+      <div class="conv-title">${c.title || 'New conversation'}</div>
+      <div class="conv-time">${c.time || 'Just now'}</div>
+    </div>
+  `).join('');
+}
+
+function switchConv(id) {
+  const conv = state.conversations.find(c => c.id === id);
+  if (!conv) return;
+  state.currentConvId = id;
+  state.messages = conv.messages || [];
+  renderMessages();
+  loadConvs();
+  if (window.innerWidth < 768) toggleSidebar();
+}
+
+function addConvToHistory(title) {
+  const existing = state.conversations.findIndex(c => c.id === state.currentConvId);
+  const conv = { id: state.currentConvId, title, messages: state.messages, time: 'Just now' };
+  if (existing >= 0) state.conversations[existing] = conv;
+  else state.conversations.unshift(conv);
+  loadConvs();
+}
+
+// ─── MESSAGES ───
+function renderWelcome() {
+  document.getElementById('welcome').style.display = state.messages.length === 0 ? 'flex' : 'none';
+}
+
+function renderMessages() {
+  const container = document.getElementById('chatMessages');
+  renderWelcome();
+  if (state.messages.length === 0) { container.innerHTML = ''; return; }
+
+  container.innerHTML = state.messages.map((m, i) => {
+    if (m.role === 'system') return '';
+    const isUser = m.role === 'user';
+    const content = escapeHtml(m.content);
+    const sources = m.sources ? renderSources(m.sources) : '';
+    const suggestions = i === state.messages.length - 1 && !isUser ? renderSuggestions(m.suggestions) : '';
+    const feedback = !isUser ? `
+      <div class="feedback-row">
+        <button onclick="feedback(${i},true)" class="${m.feedback === true ? 'active' : ''}" title="Helpful"><i class="ti ti-thumb-up"></i></button>
+        <button onclick="feedback(${i},false)" class="${m.feedback === false ? 'active' : ''}" title="Not helpful"><i class="ti ti-thumb-down"></i></button>
+      </div>` : '';
+    return `
+      <div class="msg ${isUser ? 'user' : 'ai'}">
+        <div class="msg-avatar ${isUser ? 'user-av' : 'ai'}">${isUser ? 'U' : '<i class="ti ti-sparkles" style="font-size:.8rem"></i>'}</div>
+        <div>
+          <div class="msg-bubble"><div>${content}</div></div>
+          <div class="msg-actions">
+            <button onclick="copyMsg(${i})" title="Copy"><i class="ti ti-copy"></i></button>
+            <button onclick="regenerate(${i})" title="Regenerate"><i class="ti ti-refresh"></i></button>
+          </div>
+          ${feedback}
+          ${sources}
+          ${suggestions}
+        </div>
+      </div>`;
+  }).join('');
+  scrollToBottom();
+}
+
+function renderSources(sources) {
+  if (!sources || sources.length === 0) return '';
+  return `
+    <div class="sources-section">
+      <div class="sources-title"><i class="ti ti-file-text"></i> Sources</div>
+      ${sources.map(s => `
+        <div class="source-card" onclick="showSourcePreview('${escapeHtml(s.source)}', ${s.page ?? 'null'}, '${escapeHtml(s.snippet || '')}')">
+          <span class="source-name"><i class="ti ti-file" style="font-size:.7rem"></i> ${escapeHtml(s.source)}</span>
+          ${s.page != null ? `<span class="source-page">p. ${s.page}</span>` : ''}
+          <div class="source-snippet">${escapeHtml(s.snippet || '')}</div>
+        </div>
+      `).join('')}
+    </div>`;
+}
+
+function renderSuggestions(suggestions) {
+  if (!suggestions || suggestions.length === 0) return '';
+  return `
+    <div class="suggestions-section">
+      <div class="suggestions-title"><i class="ti ti-message"></i> You might also ask:</div>
+      <div class="suggestions-list">
+        ${suggestions.map(s => `<button class="suggestion-chip" onclick="askQuick('${escapeHtml(s)}')">${escapeHtml(s)}</button>`).join('')}
+      </div>
+    </div>`;
+}
+
+function addMessage(role, content, sources, suggestions) {
+  state.messages.push({ role, content, sources, suggestions });
+  renderMessages();
+}
+
+function scrollToBottom() {
+  const area = document.getElementById('messagesArea');
+  setTimeout(() => { area.scrollTop = area.scrollHeight; }, 50);
+}
+
+// ─── INPUT ───
+function handleKey(e) {
+  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); sendMessage(); }
+  else if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+  document.getElementById('sendBtn').disabled = el.value.trim() === '';
+}
+
+async function sendMessage() {
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if (!text || state.isProcessing) return;
+
+  input.value = '';
+  autoResize(input);
+  document.getElementById('sendBtn').disabled = true;
+  document.getElementById('welcome').style.display = 'none';
+  state.isProcessing = true;
+
+  if (!state.currentConvId) state.currentConvId = crypto.randomUUID();
+
+  addMessage('user', text);
+  showTyping();
+
+  try {
+    let reply, sources, suggestions;
+
+    if (state.useMock) {
+      await delay(800 + Math.random() * 700);
+      if (state.messages.length === 1) {
+        addConvToHistory(text.slice(0, 40) + '...');
+      }
+      const mock = getMockResponse(text);
+      reply = mock.reply;
+      sources = mock.sources;
+      suggestions = mock.suggestions;
+    } else {
+      const res = await fetch(`${state.apiBase}/api/chat`, {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({
+          message: text,
+          conversation_id: state.currentConvId,
+          hf_token: state.settings.hfToken,
+          model_name: state.settings.modelName,
+          search_type: state.settings.searchType,
+          retrieval_k: state.settings.retrievalK,
+          rerank_enabled: state.settings.rerankEnabled,
+          rerank_k: state.settings.rerankK,
+        }),
+      });
+      if (!res.ok) throw new Error((await res.json()).detail || 'API error');
+      const data = await res.json();
+      reply = data.reply;
+      sources = data.sources;
+      suggestions = data.suggestions;
+      if (state.messages.length === 1) addConvToHistory(text.slice(0, 40) + '...');
+    }
+
+    hideTyping();
+    addMessage('assistant', reply, sources, suggestions);
+
+  } catch (err) {
+    hideTyping();
+    addMessage('assistant', `Error: ${err.message}. ${state.useMock ? '' : 'Falling back to demo mode.'}`);
+    state.useMock = true;
+  }
+
+  state.isProcessing = false;
+  document.getElementById('chatInput').focus();
+}
+
+function showTyping() {
+  const container = document.getElementById('chatMessages');
+  const typingEl = document.createElement('div');
+  typingEl.id = 'typingIndicator';
+  typingEl.className = 'msg ai';
+  typingEl.innerHTML = `
+    <div class="msg-avatar ai"><i class="ti ti-sparkles" style="font-size:.8rem"></i></div>
+    <div>
+      <div class="msg-bubble"><div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div></div>
+    </div>`;
+  container.appendChild(typingEl);
+  scrollToBottom();
+}
+
+function hideTyping() {
+  const el = document.getElementById('typingIndicator');
+  if (el) el.remove();
+}
+
+function askQuick(text) {
+  document.getElementById('chatInput').value = text;
+  autoResize(document.getElementById('chatInput'));
+  sendMessage();
+}
+
+// ─── ACTIONS ───
+function copyMsg(i) {
+  const text = state.messages[i]?.content || '';
+  navigator.clipboard.writeText(text).then(() => showToast('Copied to clipboard', 'success')).catch(() => {});
+}
+
+function regenerate(i) {
+  if (i <= 0) return;
+  state.messages = state.messages.slice(0, i - 1);
+  renderMessages();
+  const prevUserMsg = state.messages[state.messages.length - 1]?.content;
+  if (prevUserMsg) {
+    document.getElementById('chatInput').value = prevUserMsg;
+    sendMessage();
+  }
+}
+
+function feedback(i, helpful) {
+  if (state.messages[i]) {
+    state.messages[i].feedback = state.messages[i].feedback === helpful ? undefined : helpful;
+    renderMessages();
+    showToast(helpful ? 'Marked as helpful' : 'Marked as not helpful', 'success');
+  }
+}
+
+function exportChat() {
+  const text = state.messages.map(m => `${m.role === 'user' ? 'You' : 'Aura'}: ${m.content}`).join('\n\n');
+  const blob = new Blob([text], {type:'text/plain'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'aura-chat-export.txt';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  showToast('Conversation exported', 'success');
+}
+
+// ─── SETTINGS ───
+function showSettings() {
+  const s = state.settings;
+  document.getElementById('hfToken').value = s.hfToken;
+  document.getElementById('modelName').value = s.modelName;
+  document.getElementById('searchType').value = s.searchType;
+  document.getElementById('retrievalK').value = s.retrievalK;
+  document.getElementById('rerankToggle').checked = s.rerankEnabled;
+  document.getElementById('rerankK').value = s.rerankK;
+  document.getElementById('rerankKGroup').style.display = s.rerankEnabled ? 'block' : 'none';
+  document.getElementById('settingsModal').classList.add('open');
+}
+
+function closeSettings() { document.getElementById('settingsModal').classList.remove('open'); }
+
+function saveSettings() {
+  state.settings = {
+    hfToken: document.getElementById('hfToken').value,
+    modelName: document.getElementById('modelName').value,
+    searchType: document.getElementById('searchType').value,
+    retrievalK: parseInt(document.getElementById('retrievalK').value) || 4,
+    rerankEnabled: document.getElementById('rerankToggle').checked,
+    rerankK: parseInt(document.getElementById('rerankK').value) || 4,
+  };
+  ['hfToken','modelName','searchType','retrievalK','rerankEnabled','rerankK'].forEach(k => {
+    localStorage.setItem(k.replace(/([A-Z])/g,'_$1').toLowerCase(), state.settings[k]);
+  });
+  localStorage.setItem('rerank_enabled', state.settings.rerankEnabled);
+  updateModelBadge();
+  closeSettings();
+  showToast('Settings saved', 'success');
+  state.useMock = !state.settings.hfToken;
+}
+
+function loadSettings() {
+  const s = state.settings;
+  if (s.hfToken) state.useMock = false;
+  document.getElementById('rerankToggle').addEventListener('change', function() {
+    document.getElementById('rerankKGroup').style.display = this.checked ? 'block' : 'none';
+  });
+}
+
+function updateModelBadge() {
+  const name = state.settings.modelName.split('/').pop() || 'Hermes-3-8B';
+  document.getElementById('modelBadge').textContent = name;
+}
+
+// ─── UPLOAD ───
+function showUpload() { document.getElementById('uploadModal').classList.add('open'); }
+function closeUpload() { document.getElementById('uploadModal').classList.remove('open'); }
+
+async function handleFiles(files) {
+  if (!files.length) return;
+  const status = document.getElementById('uploadStatus');
+  status.textContent = `Uploading ${files.length} file(s)...`;
+
+  if (state.useMock) {
+    await delay(1000);
+    status.innerHTML = `<span style="color:var(--success)"><i class="ti ti-check"></i> ${files.length} file(s) processed (demo mode)</span>`;
+    return;
+  }
+
+  try {
+    const formData = new FormData();
+    for (const f of files) formData.append('files', f);
+    const res = await fetch(`${state.apiBase}/api/upload`, { method: 'POST', body: formData });
+    if (!res.ok) throw new Error('Upload failed');
+    const data = await res.json();
+    status.innerHTML = `<span style="color:var(--success)"><i class="ti ti-check"></i> ${data.chunks} chunks indexed from ${data.files.length} file(s)</span>`;
+  } catch (err) {
+    status.innerHTML = `<span style="color:var(--danger)"><i class="ti ti-x"></i> ${err.message}</span>`;
+  }
+}
+
+function showSourcePreview(name, page, snippet) {
+  showToast(`Source: ${name}${page != null ? ' (p. '+page+')' : ''}`, 'success');
+}
+
+// ─── TOAST ───
+function showToast(msg, type) {
+  const el = document.getElementById('toast');
+  document.getElementById('toastMsg').textContent = msg;
+  el.className = 'toast ' + (type || '');
+  el.classList.add('show');
+  clearTimeout(el._timeout);
+  el._timeout = setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+// ─── MOCK DATA ───
+const mockResponses = [
+  {
+    keywords: ['summarize','summary','overview','key point','main point'],
+    reply: `Based on the documents in your knowledge base, here are the key findings:
+
+**Core Insights**
+
+The documents cover several interconnected themes that form the foundation of the subject matter. The primary focus revolves around understanding the fundamental principles and their practical applications in real-world scenarios.
+
+**Key Areas Identified**
+
+1. **Theoretical Framework** — The documents establish a comprehensive theoretical foundation, drawing from established research and contemporary developments in the field. This framework provides the necessary context for understanding more complex concepts.
+
+2. **Practical Applications** — Several case studies demonstrate how theoretical concepts translate into actionable strategies. These examples highlight both successful implementations and common pitfalls to avoid.
+
+3. **Emerging Trends** — The materials discuss recent developments and emerging patterns that are shaping the future direction of the field. These include technological advancements and methodological innovations.
+
+4. **Critical Analysis** — The documents don't just present information; they offer critical perspectives that encourage deeper thinking about the subject matter.
+
+In conclusion, the knowledge base provides a well-rounded view that balances theoretical depth with practical applicability.`,
+    sources: [
+      { source: 'research_paper_2024.pdf', page: 3, snippet: 'The theoretical framework establishes key concepts that underpin the entire body of work. These foundational elements are crucial for understanding advanced topics discussed later in the text.' },
+      { source: 'case_studies_compilation.docx', page: 12, snippet: 'Practical applications demonstrate the real-world relevance of theoretical concepts. Multiple case studies illustrate successful implementations across diverse contexts.' },
+      { source: 'industry_report_q1.pdf', page: 7, snippet: 'Emerging trends indicate a shift toward more integrated approaches. The data suggests accelerating adoption of new methodologies across the sector.' },
+    ],
+    suggestions: ['What are the key statistics mentioned?', 'Explain the theoretical framework in detail', 'How do these findings compare with industry standards?', 'What are the limitations discussed?']
+  },
+  {
+    keywords: ['topic','theme','subject','related','connect'],
+    reply: `Here are the related topics and themes I've identified across your documents:
+
+**Topic Clusters**
+
+1. **Core Concepts**
+   Fundamental principles and definitions that form the basis of discussion throughout the documents. These include the primary terminology and conceptual frameworks used consistently across all sources.
+
+2. **Methodology & Approaches**
+   Different methodological frameworks discussed, including both traditional and innovative approaches. The documents compare various methodologies and their respective strengths in different contexts.
+
+3. **Impact & Outcomes**
+   Measurable results and observed outcomes from implementing the discussed approaches. This section includes quantitative data and qualitative assessments from multiple studies.
+
+4. **Future Directions**
+   Forward-looking perspectives on where the field is heading, including predicted developments and emerging areas of focus.
+
+The interconnected nature of these topics suggests a holistic understanding is necessary for comprehensive analysis.`,
+    sources: [
+      { source: 'literature_review.pdf', page: 5, snippet: 'The literature reveals several interconnected themes that span across multiple disciplines. Understanding these connections is key to developing a comprehensive view of the subject.' },
+      { source: 'methodology_guide.docx', page: 22, snippet: 'Different methodological approaches yield varying results depending on context. The choice of methodology significantly impacts the outcomes and their interpretation.' },
+      { source: 'future_outlook_report.pdf', page: 15, snippet: 'Emerging trends suggest a convergence of previously distinct fields. This integration promises new insights and applications in the coming years.' },
+      { source: 'analysis_framework.pdf', page: 8, snippet: 'The analytical framework provides a structured approach to understanding complex relationships between different topics and their implications.' },
+    ],
+    suggestions: ['Dive deeper into the methodology section', 'What are the key findings from the literature review?', 'Compare the different approaches mentioned', 'What future trends are predicted?']
+  },
+  {
+    keywords: ['compare','contrast','difference','different','versus','vs'],
+    reply: `Here's a comparative analysis of the information across your documents:
+
+**Comparative Analysis**
+
+**Approach A vs Approach B**
+The documents present two primary approaches to the subject. Approach A emphasizes theoretical rigor and systematic methodology, while Approach B focuses on practical adaptability and real-world applicability. Each has distinct advantages depending on the context.
+
+**Quantitative vs Qualitative Findings**
+The knowledge base contains both quantitative data (statistics, metrics, measurements) and qualitative insights (case studies, observations, expert opinions). The quantitative data provides measurable benchmarks, while qualitative findings offer nuanced contextual understanding.
+
+**Traditional vs Emerging Perspectives**
+There's a clear evolution from traditional perspectives to more contemporary viewpoints. Traditional approaches offer established reliability, while emerging perspectives promise innovation and adaptability to changing conditions.
+
+**Key Differentiators**
+- Scope: Some documents take a broad overview while others focus on specific niches
+- Depth: Varies from introductory to advanced technical analysis
+- Recency: Documents span different time periods, showing evolution of thinking
+- Methodology: Different analytical frameworks used across sources
+
+This diversity of perspectives actually strengthens the knowledge base by providing multiple angles on the same subject matter.`,
+    sources: [
+      { source: 'comparative_study.pdf', page: 8, snippet: 'The comparative analysis reveals significant differences in outcomes between the two primary approaches. Each method has distinct advantages depending on the specific context and requirements.' },
+      { source: 'methodology_comparison.docx', page: 15, snippet: 'When comparing traditional and modern methodologies, we observe a shift toward more integrated, flexible approaches that combine the strengths of multiple frameworks.' },
+      { source: 'data_analysis_report.pdf', page: 4, snippet: 'Quantitative metrics show clear differentiation between approaches, while qualitative assessments provide context for understanding these numerical differences.' },
+    ],
+    suggestions: ['What are the advantages of each approach?', 'Which methodology is recommended and why?', 'Show me the data supporting these comparisons', 'How do these differences impact practical implementation?']
+  },
+  {
+    keywords: ['insight','finding','discover','reveal','highlight','key takeaway'],
+    reply: `Here are the key insights extracted from your knowledge base:
+
+**Major Findings**
+
+1. **Pattern Recognition**
+   The documents reveal consistent patterns across multiple sources. These recurring themes suggest fundamental principles that transcend individual contexts and applications.
+
+2. **Critical Success Factors**
+   Several documents identify common factors that contribute to successful outcomes. These include proper planning, stakeholder engagement, iterative approaches, and continuous evaluation.
+
+3. **Challenges & Limitations**
+   The knowledge base honestly addresses challenges and limitations, providing a balanced perspective. Common challenges include resource constraints, knowledge gaps, and implementation complexities.
+
+4. **Evidence-Based Recommendations**
+   The documents converge on several evidence-based recommendations that are supported by multiple sources and studies. These actionable insights provide clear guidance.
+
+**Quantitative Highlights**
+- Success rates improve by approximately 40% when recommended methodologies are followed
+- Implementation time can be reduced by up to 30% with proper planning
+- Stakeholder satisfaction scores average 4.2/5 across documented case studies
+
+These insights represent the distilled wisdom from across your entire knowledge base.`,
+    sources: [
+      { source: 'executive_summary.pdf', page: 2, snippet: 'The executive summary distills key findings into actionable insights. Success rates show significant improvement when evidence-based methodologies are employed consistently.' },
+      { source: 'performance_metrics.docx', page: 6, snippet: 'Performance data reveals clear patterns in successful implementations. Key metrics show consistent improvement across measured dimensions when best practices are followed.' },
+      { source: 'lessons_learned.pdf', page: 11, snippet: 'The lessons learned section provides valuable insights from both successful and unsuccessful cases, offering practical guidance for future initiatives.' },
+    ],
+    suggestions: ['What are the top recommendations?', 'Show me the evidence behind these findings', 'What are the common pitfalls to avoid?', 'How can I apply these insights practically?']
+  }
+];
+
+const defaultResponse = {
+  reply: `Great question! Based on my analysis of your knowledge base, here's what I found:
+
+**Direct Answer**
+
+The documents in your knowledge base contain substantial information relevant to your query. After processing and synthesizing the content from multiple sources, several key points emerge.
+
+**Detailed Analysis**
+
+Looking at the retrieved documents, we can identify several important aspects that directly address your question. The information spans multiple documents, each contributing a unique perspective to create a comprehensive understanding of the topic.
+
+The sources indicate that this subject requires careful consideration of multiple factors. The documents emphasize the importance of context when interpreting the information and applying it to specific situations.
+
+**Key Takeaways**
+- Multiple sources confirm the core findings
+- Context plays a crucial role in interpretation
+- Further exploration of specific sub-topics may be beneficial
+- The documents provide a solid foundation for deeper investigation
+
+I recommend exploring the cited sources below for more detailed information on specific aspects of your question.`,
+  sources: [
+    { source: 'primary_source_document.pdf', page: 14, snippet: 'The primary document provides foundational information relevant to this query. Key concepts are explained in detail with supporting evidence and examples.' },
+    { source: 'supporting_material.docx', page: 8, snippet: 'Supporting documents offer additional context and complementary information that enriches understanding of the primary findings.' },
+    { source: 'reference_guide.pdf', page: 3, snippet: 'The reference guide provides quick access to key definitions and concepts discussed across the knowledge base.' },
+  ],
+  suggestions: ['Can you elaborate on the first point?', 'What additional sources are available?', 'How does this compare with other documents?', 'Show me more detailed information on this topic']
+};
+
+function getMockResponse(query) {
+  const lower = query.toLowerCase();
+  for (const mock of mockResponses) {
+    if (mock.keywords.some(k => lower.includes(k))) return mock;
+  }
+  return defaultResponse;
+}
+
+// ─── UTILITIES ───
+function escapeHtml(str) {
+  if (!str) return '';
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// Close modals on overlay click
+document.querySelectorAll('.modal-overlay').forEach(el => {
+  el.addEventListener('click', function(e) {
+    if (e.target === this) this.classList.remove('open');
+  });
+});
+
+// Keyboard shortcuts
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.modal-overlay.open').forEach(m => m.classList.remove('open'));
+  }
+  if ((e.ctrlKey || e.metaKey) && e.key === '/') {
+    e.preventDefault();
+    document.getElementById('chatInput').focus();
+  }
+});
+</script>
+</body>
+</html>
