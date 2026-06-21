@@ -11,11 +11,8 @@ from rag_engine import (
     ingest_documents,
     get_retrieval_chain,
     clear_vector_store,
-    get_embeddings,
     load_vector_store,
     extract_sources,
-    DOCUMENTS_DIR,
-    VECTOR_STORE_PATH,
 )
 
 load_dotenv()
@@ -170,8 +167,11 @@ with st.sidebar:
     st.markdown('<div class="sidebar-divider"></div>', unsafe_allow_html=True)
 
     # Knowledge base stats
-    vs = load_vector_store()
-    doc_count = vs.index.ntotal if vs is not None else 0
+    @st.cache_data(ttl=5)
+    def _get_chunk_count():
+        vs = load_vector_store()
+        return vs.index.ntotal if vs is not None else 0
+    doc_count = _get_chunk_count()
     st.markdown(
         f"""
         <div class="knowledge-stats">
@@ -322,6 +322,8 @@ def _handle_user_input(text: str):
             result = chain.invoke({"question": text})
             reply = result.get("answer", "I couldn't find an answer.")
             reply = re.sub(r'^.*?Answer:\s*', '', reply, flags=re.IGNORECASE | re.DOTALL).strip()
+            if not reply:
+                reply = result.get("answer", "I couldn't find an answer.").strip()
             source_docs = result.get("source_documents", [])
             sources = extract_sources(source_docs)
     except Exception as e:

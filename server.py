@@ -1,4 +1,5 @@
 import os
+import re
 import uuid
 import uvicorn
 from pathlib import Path
@@ -14,6 +15,7 @@ os.environ["HF_TOKEN"] = os.getenv("HUGGINGFACEHUB_API_TOKEN", "")
 
 from rag_engine import (
     ingest_documents,
+    ingest_documents_from_paths,
     get_retrieval_chain,
     clear_vector_store,
     extract_sources,
@@ -75,7 +77,7 @@ async def chat(req: ChatRequest):
 
     result = chain.invoke({"question": req.message})
     reply = result.get("answer", "I couldn't find an answer.")
-    reply = __import__("re").sub(r'^.*?Answer:\s*', '', reply, flags=__import__("re").IGNORECASE | __import__("re").DOTALL).strip()
+    reply = re.sub(r'^.*?Answer:\s*', '', reply, flags=re.IGNORECASE | re.DOTALL).strip()
     source_docs = result.get("source_documents", [])
     sources = extract_sources(source_docs)
 
@@ -94,12 +96,14 @@ async def chat(req: ChatRequest):
 @app.post("/api/upload")
 async def upload(files: list[UploadFile] = File(...)):
     saved = []
+    saved_paths = []
     for f in files:
         dest = Path("documents") / f.filename
         content = await f.read()
         dest.write_bytes(content)
         saved.append(f.filename)
-    count = ingest_documents([f for f in files])
+        saved_paths.append(str(dest))
+    count = ingest_documents_from_paths(saved_paths)
     return {"files": saved, "chunks": count}
 
 @app.get("/api/conversations")

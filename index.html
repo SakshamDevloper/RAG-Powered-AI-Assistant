@@ -188,7 +188,7 @@ input,textarea{font-family:inherit}
   color:var(--text-dim);font-size:.78rem;display:flex;align-items:center;justify-content:center;transition:all .15s;
 }
 .feedback-row button:hover{background:var(--surface-hover);color:var(--primary)}
-.feedback-row button.active{color:var(--primary);background:rgba(99,102,241,0.1)}
+.fb-btn.active{color:var(--primary);background:rgba(99,102,241,0.1)}
 
 /* ─── SOURCES ─── */
 .sources-section{margin-top:8px;padding:8px 12px;border-radius:var(--radius-sm);background:rgba(255,255,255,0.01);border:1px solid var(--border)}
@@ -431,7 +431,7 @@ input,textarea{font-family:inherit}
   <div class="input-area">
     <div class="input-inner">
       <div class="input-wrap">
-        <textarea id="chatInput" rows="1" placeholder="Ask anything... (Ctrl+Enter to send)" oninput="autoResize(this)" onkeydown="handleKey(event)"></textarea>
+        <textarea id="chatInput" rows="1" placeholder="Ask anything... (Enter to send, Shift+Enter for newline)" oninput="autoResize(this)" onkeydown="handleKey(event)"></textarea>
         <button class="attach-btn" onclick="showUpload()" title="Attach files"><i class="ti ti-paperclip"></i></button>
       </div>
       <button class="send-btn" id="sendBtn" onclick="sendMessage()" disabled><i class="ti ti-arrow-up"></i></button>
@@ -503,6 +503,30 @@ input,textarea{font-family:inherit}
   </div>
 </div>
 
+<!-- ─── SOURCE PREVIEW MODAL ─── -->
+<div class="modal-overlay" id="sourceModal">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-header">
+      <h2><i class="ti ti-file-text" style="margin-right:6px"></i>Source Preview</h2>
+      <button class="modal-close" onclick="closeSourcePreview()"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body">
+      <div style="margin-bottom:12px">
+        <div style="font-size:.82rem;color:var(--text-muted);margin-bottom:2px">Document</div>
+        <div id="sourceName" style="font-size:.95rem;font-weight:600;color:var(--primary)"></div>
+      </div>
+      <div id="sourcePageWrap" style="margin-bottom:12px;display:none">
+        <div style="font-size:.82rem;color:var(--text-muted);margin-bottom:2px">Page</div>
+        <div id="sourcePage" style="font-size:.9rem"></div>
+      </div>
+      <div>
+        <div style="font-size:.82rem;color:var(--text-muted);margin-bottom:4px">Excerpt</div>
+        <div id="sourceSnippet" style="font-size:.85rem;line-height:1.7;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;max-height:240px;overflow-y:auto"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ─── TOAST ─── -->
 <div class="toast" id="toast">
   <i class="ti ti-check"></i>
@@ -570,9 +594,9 @@ function loadConvs() {
     return;
   }
   list.innerHTML = state.conversations.map(c => `
-    <div class="conv-item${c.id === state.currentConvId ? ' active' : ''}" onclick="switchConv('${c.id}')">
-      <div class="conv-title">${c.title || 'New conversation'}</div>
-      <div class="conv-time">${c.time || 'Just now'}</div>
+    <div class="conv-item${c.id === state.currentConvId ? ' active' : ''}" data-conv-id="${c.id}">
+      <div class="conv-title">${escapeHtml(c.title || 'New conversation')}</div>
+      <div class="conv-time">${escapeHtml(c.time || 'Just now')}</div>
     </div>
   `).join('');
 }
@@ -613,8 +637,8 @@ function renderMessages() {
     const suggestions = i === state.messages.length - 1 && !isUser ? renderSuggestions(m.suggestions) : '';
     const feedback = !isUser ? `
       <div class="feedback-row">
-        <button onclick="feedback(${i},true)" class="${m.feedback === true ? 'active' : ''}" title="Helpful"><i class="ti ti-thumb-up"></i></button>
-        <button onclick="feedback(${i},false)" class="${m.feedback === false ? 'active' : ''}" title="Not helpful"><i class="ti ti-thumb-down"></i></button>
+        <button class="fb-btn${m.feedback === true ? ' active' : ''}" data-msg-index="${i}" data-fb-value="true" title="Helpful"><i class="ti ti-thumb-up"></i></button>
+        <button class="fb-btn${m.feedback === false ? ' active' : ''}" data-msg-index="${i}" data-fb-value="false" title="Not helpful"><i class="ti ti-thumb-down"></i></button>
       </div>` : '';
     return `
       <div class="msg ${isUser ? 'user' : 'ai'}">
@@ -622,8 +646,8 @@ function renderMessages() {
         <div>
           <div class="msg-bubble"><div>${content}</div></div>
           <div class="msg-actions">
-            <button onclick="copyMsg(${i})" title="Copy"><i class="ti ti-copy"></i></button>
-            <button onclick="regenerate(${i})" title="Regenerate"><i class="ti ti-refresh"></i></button>
+            <button class="copy-btn" data-msg-index="${i}" title="Copy"><i class="ti ti-copy"></i></button>
+            <button class="regen-btn" data-msg-index="${i}" title="Regenerate"><i class="ti ti-refresh"></i></button>
           </div>
           ${feedback}
           ${sources}
@@ -640,7 +664,7 @@ function renderSources(sources) {
     <div class="sources-section">
       <div class="sources-title"><i class="ti ti-file-text"></i> Sources</div>
       ${sources.map(s => `
-        <div class="source-card" onclick="showSourcePreview('${escapeHtml(s.source)}', ${s.page ?? 'null'}, '${escapeHtml(s.snippet || '')}')">
+        <div class="source-card" data-src-name="${escapeHtml(s.source)}" data-src-page="${s.page ?? ''}" data-src-snippet="${escapeHtml(s.snippet || '')}">
           <span class="source-name"><i class="ti ti-file" style="font-size:.7rem"></i> ${escapeHtml(s.source)}</span>
           ${s.page != null ? `<span class="source-page">p. ${s.page}</span>` : ''}
           <div class="source-snippet">${escapeHtml(s.snippet || '')}</div>
@@ -655,7 +679,7 @@ function renderSuggestions(suggestions) {
     <div class="suggestions-section">
       <div class="suggestions-title"><i class="ti ti-message"></i> You might also ask:</div>
       <div class="suggestions-list">
-        ${suggestions.map(s => `<button class="suggestion-chip" onclick="askQuick('${escapeHtml(s)}')">${escapeHtml(s)}</button>`).join('')}
+        ${suggestions.map(s => `<button class="suggestion-chip" data-question="${escapeHtml(s)}">${escapeHtml(s)}</button>`).join('')}
       </div>
     </div>`;
 }
@@ -857,6 +881,20 @@ function updateModelBadge() {
 function showUpload() { document.getElementById('uploadModal').classList.add('open'); }
 function closeUpload() { document.getElementById('uploadModal').classList.remove('open'); }
 
+// Drag-and-drop on dropzone
+document.addEventListener('DOMContentLoaded', () => {
+  const dz = document.getElementById('dropzone');
+  if (!dz) return;
+  dz.addEventListener('dragover', e => { e.preventDefault(); dz.style.borderColor = 'rgba(99,102,241,0.5)'; dz.style.background = 'rgba(99,102,241,0.04)'; });
+  dz.addEventListener('dragleave', () => { dz.style.borderColor = ''; dz.style.background = ''; });
+  dz.addEventListener('drop', e => {
+    e.preventDefault();
+    dz.style.borderColor = ''; dz.style.background = '';
+    const files = e.dataTransfer.files;
+    if (files.length) handleFiles(files);
+  });
+});
+
 async function handleFiles(files) {
   if (!files.length) return;
   const status = document.getElementById('uploadStatus');
@@ -881,7 +919,21 @@ async function handleFiles(files) {
 }
 
 function showSourcePreview(name, page, snippet) {
-  showToast(`Source: ${name}${page != null ? ' (p. '+page+')' : ''}`, 'success');
+  document.getElementById('sourceName').textContent = name;
+  const pageWrap = document.getElementById('sourcePageWrap');
+  const pageEl = document.getElementById('sourcePage');
+  if (page != null) {
+    pageWrap.style.display = 'block';
+    pageEl.textContent = `p. ${page}`;
+  } else {
+    pageWrap.style.display = 'none';
+  }
+  document.getElementById('sourceSnippet').textContent = snippet || '';
+  document.getElementById('sourceModal').classList.add('open');
+}
+
+function closeSourcePreview() {
+  document.getElementById('sourceModal').classList.remove('open');
 }
 
 // ─── TOAST ───
@@ -1072,6 +1124,50 @@ document.addEventListener('keydown', e => {
   if ((e.ctrlKey || e.metaKey) && e.key === '/') {
     e.preventDefault();
     document.getElementById('chatInput').focus();
+  }
+});
+
+// Event delegation for chat messages
+document.getElementById('chatMessages').addEventListener('click', function(e) {
+  const chip = e.target.closest('.suggestion-chip');
+  if (chip) {
+    const question = chip.getAttribute('data-question');
+    if (question) askQuick(question);
+    return;
+  }
+  const sourceCard = e.target.closest('.source-card');
+  if (sourceCard) {
+    const name = sourceCard.dataset.srcName;
+    const page = sourceCard.dataset.srcPage;
+    const snippet = sourceCard.dataset.srcSnippet;
+    showSourcePreview(name, page || null, snippet);
+    return;
+  }
+  const fbBtn = e.target.closest('.fb-btn');
+  if (fbBtn) {
+    const idx = parseInt(fbBtn.dataset.msgIndex);
+    const val = fbBtn.dataset.fbValue === 'true';
+    feedback(idx, val);
+    return;
+  }
+  const copyBtn = e.target.closest('.copy-btn');
+  if (copyBtn) {
+    copyMsg(parseInt(copyBtn.dataset.msgIndex));
+    return;
+  }
+  const regenBtn = e.target.closest('.regen-btn');
+  if (regenBtn) {
+    regenerate(parseInt(regenBtn.dataset.msgIndex));
+    return;
+  }
+});
+
+// Event delegation for conversation list
+document.getElementById('convList').addEventListener('click', function(e) {
+  const item = e.target.closest('.conv-item');
+  if (item) {
+    const id = item.dataset.convId;
+    if (id) switchConv(id);
   }
 });
 </script>

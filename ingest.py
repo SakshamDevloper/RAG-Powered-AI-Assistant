@@ -6,7 +6,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from rag_engine import ingest_documents, DOCUMENTS_DIR
+from rag_engine import ingest_documents_from_paths
 
 load_dotenv()
 
@@ -24,14 +24,14 @@ def main():
         path = Path(p)
         if path.is_file():
             if path.suffix.lower() in SUPPORTED_EXTENSIONS:
-                file_paths.append(path)
+                file_paths.append(str(path))
             else:
                 print(f"Skipping unsupported file: {path} ({path.suffix})")
         elif path.is_dir():
             pattern = "**/*" if args.recursive else "*"
             for f in path.glob(pattern):
                 if f.is_file() and f.suffix.lower() in SUPPORTED_EXTENSIONS:
-                    file_paths.append(f)
+                    file_paths.append(str(f))
         else:
             print(f"Path not found: {path}")
 
@@ -40,22 +40,7 @@ def main():
         sys.exit(1)
 
     print(f"Found {len(file_paths)} file(s) to ingest...")
-
-    # Use Streamlit's UploadedFile-like wrapper
-    class SimpleUploadedFile:
-        def __init__(self, path: Path):
-            self.name = path.name
-            self.size = path.stat().st_size
-            self._path = path
-
-        def getbuffer(self):
-            return self._path.read_bytes()
-
-        def read(self):
-            return self._path.read_bytes()
-
-    uploaded = [SimpleUploadedFile(f) for f in file_paths]
-    count = ingest_documents(uploaded)
+    count = ingest_documents_from_paths(file_paths)
     print(f"Ingested {count} chunks into the vector store.")
 
 

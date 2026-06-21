@@ -1,10 +1,9 @@
 import os
 import pickle
 import tempfile
+from functools import lru_cache
 from pathlib import Path
 from typing import List, Optional
-
-import streamlit as st
 
 from langchain_community.document_loaders import (
     PyPDFLoader,
@@ -15,9 +14,9 @@ from langchain_community.document_loaders import (
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
-from langchain_classic.memory import ConversationBufferMemory
-from langchain_classic.chains import ConversationalRetrievalChain
-from langchain_classic.schema import Document
+from langchain.memory import ConversationBufferMemory
+from langchain.chains import ConversationalRetrievalChain
+from langchain_core.documents import Document
 from langchain_openai import ChatOpenAI
 from langchain_core.retrievers import BaseRetriever
 from langchain_core.callbacks import CallbackManagerForRetrieverRun
@@ -32,7 +31,7 @@ VECTOR_STORE_DIR.mkdir(exist_ok=True)
 DOCUMENTS_DIR.mkdir(exist_ok=True)
 
 
-@st.cache_resource
+@lru_cache(maxsize=1)
 def get_embeddings():
     return HuggingFaceEmbeddings(
         model_name=EMBEDDING_MODEL,
@@ -41,11 +40,10 @@ def get_embeddings():
     )
 
 
-@st.cache_resource
-def get_llm(_api_token: str, model_name: Optional[str] = None):
+def get_llm(api_token: str, model_name: Optional[str] = None):
     return ChatOpenAI(
         model=model_name or LLM_MODEL,
-        api_key=_api_token,
+        api_key=api_token,
         base_url="https://router.huggingface.co/v1",
         temperature=0.3,
         max_tokens=1024,
@@ -231,6 +229,20 @@ def get_retrieval_chain(
         verbose=False,
     )
     return chain
+
+
+def ingest_documents_from_paths(file_paths: List[str]) -> int:
+    all_docs = []
+    for path in file_paths:
+        docs = load_document(path)
+        all_docs.extend(docs)
+    if not all_docs:
+        return 0
+    chunks = split_documents(all_docs)
+    vector_store = get_vector_store()
+    vector_store.add_documents(chunks)
+    save_vector_store(vector_store)
+    return len(chunks)
 
 
 def clear_vector_store():
