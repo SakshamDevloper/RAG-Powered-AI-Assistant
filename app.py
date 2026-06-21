@@ -133,7 +133,7 @@ if "chain" not in st.session_state:
 if "hf_token" not in st.session_state:
     st.session_state.hf_token = os.getenv("HUGGINGFACEHUB_API_TOKEN", "")
 if "model_name" not in st.session_state:
-    st.session_state.model_name = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-7B-Instruct")
+    st.session_state.model_name = os.getenv("MODEL_NAME", "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B")
 if "ingested" not in st.session_state:
     st.session_state.ingested = False
 if "retrieval_k" not in st.session_state:
@@ -577,7 +577,7 @@ def render_settings():
                 <br> <strong>Streamlit</strong> — interactive frontend
                 <br><br>
                 Embedding model: <code>all-MiniLM-L6-v2</code> (384 dims)
-                <br>Default LLM: <code>Qwen/Qwen2.5-7B-Instruct</code>
+                <br>Default LLM: <code>deepseek-ai/DeepSeek-R1-Distill-Qwen-7B</code>
                 <br>Re-ranker: <code>ms-marco-MiniLM-L-6-v2</code>
             </div>
             """,

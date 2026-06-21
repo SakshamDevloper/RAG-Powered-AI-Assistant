@@ -383,7 +383,7 @@ input,textarea{font-family:inherit}
     <div class="chat-header-left">
       <button class="mobile-menu-btn" onclick="toggleSidebar()"><i class="ti ti-menu-2"></i></button>
       <h1><i class="ti ti-corner-up-left" style="font-size:.85rem;color:var(--text-dim);margin-right:6px;display:none" id="backIcon"></i>AI Knowledge Assistant</h1>
-      <span class="model-badge" id="modelBadge">Qwen2.5-7B</span>
+      <span class="model-badge" id="modelBadge">DeepSeek-R1-7B</span>
     </div>
     <div class="chat-header-actions">
       <button onclick="showUpload()" title="Upload documents"><i class="ti ti-upload"></i></button>
@@ -455,7 +455,7 @@ input,textarea{font-family:inherit}
       </div>
       <div class="form-group">
         <label>Model ID</label>
-        <input type="text" id="modelName" placeholder="Qwen/Qwen2.5-7B-Instruct" value="Qwen/Qwen2.5-7B-Instruct">
+        <input type="text" id="modelName" placeholder="deepseek-ai/DeepSeek-R1-Distill-Qwen-7B" value="deepseek-ai/DeepSeek-R1-Distill-Qwen-7B">
       </div>
       <div class="form-group">
         <label>Search strategy</label>
@@ -541,7 +541,7 @@ const state = {
   currentConvId: null,
   settings: {
     hfToken: localStorage.getItem('hf_token') || '',
-    modelName: localStorage.getItem('model_name') || 'Qwen/Qwen2.5-7B-Instruct',
+    modelName: localStorage.getItem('model_name') || 'deepseek-ai/DeepSeek-R1-Distill-Qwen-7B',
     searchType: localStorage.getItem('search_type') || 'similarity',
     retrievalK: parseInt(localStorage.getItem('retrieval_k')) || 4,
     rerankEnabled: localStorage.getItem('rerank_enabled') === 'true',
@@ -564,11 +564,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Migrate old/invalid model names stored in localStorage
 function migrateOldSettings() {
-  const oldModels = ['NousResearch/Hermes-3-Llama-3.1-8B', 'NousResearch/Hermes-3-Llama-3.1-8B'];
+  const oldModels = ['NousResearch/Hermes-3-Llama-3.1-8B', 'Qwen/Qwen2.5-7B-Instruct'];
   const stored = localStorage.getItem('model_name');
   if (stored && oldModels.includes(stored)) {
-    localStorage.setItem('model_name', 'Qwen/Qwen2.5-7B-Instruct');
-    state.settings.modelName = 'Qwen/Qwen2.5-7B-Instruct';
+    localStorage.setItem('model_name', 'deepseek-ai/DeepSeek-R1-Distill-Qwen-7B');
+    state.settings.modelName = 'deepseek-ai/DeepSeek-R1-Distill-Qwen-7B';
     updateModelBadge();
   }
 }
@@ -765,9 +765,9 @@ async function sendMessage() {
         const detail = errData.detail || (errData.error?.message) || 'API error';
         if (res.status === 400 && (detail.includes('model_not_supported') || detail.includes('not supported'))) {
           state.settings.modelName = 'Qwen/Qwen2.5-7B-Instruct';
-          localStorage.setItem('model_name', 'Qwen/Qwen2.5-7B-Instruct');
+          localStorage.setItem('model_name', 'deepseek-ai/DeepSeek-R1-Distill-Qwen-7B');
           updateModelBadge();
-          throw new Error(`Model not available. Switched to Qwen/Qwen2.5-7B-Instruct. Please try again.`);
+          throw new Error(`Model not available. Switched to deepseek-ai/DeepSeek-R1-Distill-Qwen-7B. Please try again.`);
         }
         throw new Error(detail);
       }
@@ -895,7 +895,7 @@ function loadSettings() {
 }
 
 function updateModelBadge() {
-  const name = state.settings.modelName.split('/').pop() || 'Qwen2.5-7B';
+  const name = state.settings.modelName.split('/').pop() || 'DeepSeek-R1-7B';
   document.getElementById('modelBadge').textContent = name;
 }
 
