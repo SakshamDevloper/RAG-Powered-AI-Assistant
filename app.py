@@ -389,14 +389,16 @@ def render_ingest():
     )
 
     if uploaded_files:
-        with st.spinner("Ingesting documents..."):
-            count = ingest_documents(uploaded_files)
-        vs = load_vector_store()
-        new_count = vs.index.ntotal if vs is not None else 0
-        st.success(f"Ingested {count} chunks. Total: {new_count}.")
-        st.session_state.chain = None
-        st.session_state.ingested = True
-        st.rerun()
+        file_key = tuple(f.name for f in uploaded_files)
+        if st.session_state.get('_last_ingested') != file_key:
+            with st.spinner("Ingesting documents..."):
+                count = ingest_documents(uploaded_files)
+            vs = load_vector_store()
+            new_count = vs.index.ntotal if vs is not None else 0
+            st.success(f"Ingested {count} chunks. Total: {new_count}.")
+            st.session_state.chain = None
+            st.session_state._last_ingested = file_key
+            st.rerun()
 
     st.markdown("<br>", unsafe_allow_html=True)
 
@@ -404,6 +406,7 @@ def render_ingest():
         clear_vector_store()
         st.session_state.chain = None
         st.session_state.messages = []
+        st.session_state._last_ingested = None
         st.success("Vector store cleared.")
         st.rerun()
 
