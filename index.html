@@ -383,7 +383,7 @@ input,textarea{font-family:inherit}
     <div class="chat-header-left">
       <button class="mobile-menu-btn" onclick="toggleSidebar()"><i class="ti ti-menu-2"></i></button>
       <h1><i class="ti ti-corner-up-left" style="font-size:.85rem;color:var(--text-dim);margin-right:6px;display:none" id="backIcon"></i>AI Knowledge Assistant</h1>
-      <span class="model-badge" id="modelBadge">Hermes-3-8B</span>
+      <span class="model-badge" id="modelBadge">Qwen2.5-7B</span>
     </div>
     <div class="chat-header-actions">
       <button onclick="showUpload()" title="Upload documents"><i class="ti ti-upload"></i></button>
@@ -455,7 +455,7 @@ input,textarea{font-family:inherit}
       </div>
       <div class="form-group">
         <label>Model ID</label>
-        <input type="text" id="modelName" placeholder="NousResearch/Hermes-3-Llama-3.1-8B" value="NousResearch/Hermes-3-Llama-3.1-8B">
+        <input type="text" id="modelName" placeholder="Qwen/Qwen2.5-7B-Instruct" value="Qwen/Qwen2.5-7B-Instruct">
       </div>
       <div class="form-group">
         <label>Search strategy</label>
@@ -541,7 +541,7 @@ const state = {
   currentConvId: null,
   settings: {
     hfToken: localStorage.getItem('hf_token') || '',
-    modelName: localStorage.getItem('model_name') || 'NousResearch/Hermes-3-Llama-3.1-8B',
+    modelName: localStorage.getItem('model_name') || 'Qwen/Qwen2.5-7B-Instruct',
     searchType: localStorage.getItem('search_type') || 'similarity',
     retrievalK: parseInt(localStorage.getItem('retrieval_k')) || 4,
     rerankEnabled: localStorage.getItem('rerank_enabled') === 'true',
@@ -873,7 +873,7 @@ function loadSettings() {
 }
 
 function updateModelBadge() {
-  const name = state.settings.modelName.split('/').pop() || 'Hermes-3-8B';
+  const name = state.settings.modelName.split('/').pop() || 'Qwen2.5-7B';
   document.getElementById('modelBadge').textContent = name;
 }
 

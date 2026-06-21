@@ -22,7 +22,7 @@ from langchain_core.retrievers import BaseRetriever
 from langchain_core.callbacks import CallbackManagerForRetrieverRun
 
 EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
-LLM_MODEL = "NousResearch/Hermes-3-Llama-3.1-8B"
+LLM_MODEL = "Qwen/Qwen2.5-7B-Instruct"
 VECTOR_STORE_DIR = Path("vectorstore")
 VECTOR_STORE_PATH = VECTOR_STORE_DIR / "faiss_index"
 DOCUMENTS_DIR = Path("documents")
