@@ -555,11 +555,23 @@ const state = {
 // ─── INIT ───
 document.addEventListener('DOMContentLoaded', () => {
   loadSettings();
+  migrateOldSettings();
   loadConvs();
   renderWelcome();
   updateModelBadge();
   checkBackend();
 });
+
+// Migrate old/invalid model names stored in localStorage
+function migrateOldSettings() {
+  const oldModels = ['NousResearch/Hermes-3-Llama-3.1-8B', 'NousResearch/Hermes-3-Llama-3.1-8B'];
+  const stored = localStorage.getItem('model_name');
+  if (stored && oldModels.includes(stored)) {
+    localStorage.setItem('model_name', 'Qwen/Qwen2.5-7B-Instruct');
+    state.settings.modelName = 'Qwen/Qwen2.5-7B-Instruct';
+    updateModelBadge();
+  }
+}
 
 async function checkBackend() {
   try {
@@ -748,7 +760,17 @@ async function sendMessage() {
           rerank_k: state.settings.rerankK,
         }),
       });
-      if (!res.ok) throw new Error((await res.json()).detail || 'API error');
+      if (!res.ok) {
+        const errData = await res.json();
+        const detail = errData.detail || (errData.error?.message) || 'API error';
+        if (res.status === 400 && (detail.includes('model_not_supported') || detail.includes('not supported'))) {
+          state.settings.modelName = 'Qwen/Qwen2.5-7B-Instruct';
+          localStorage.setItem('model_name', 'Qwen/Qwen2.5-7B-Instruct');
+          updateModelBadge();
+          throw new Error(`Model not available. Switched to Qwen/Qwen2.5-7B-Instruct. Please try again.`);
+        }
+        throw new Error(detail);
+      }
       const data = await res.json();
       reply = data.reply;
       sources = data.sources;
