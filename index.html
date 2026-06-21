@@ -580,6 +580,10 @@ async function checkBackend() {
       state.useMock = false;
       const data = await res.json();
       if (data.chunks > 0) document.getElementById('uploadStatus').textContent = `${data.chunks} chunks indexed`;
+      if (data.token_configured && !state.settings.hfToken) {
+        state.settings.hfToken = '__server__';
+        localStorage.setItem('hf_token', '__server__');
+      }
     }
   } catch { state.useMock = true; }
 }
@@ -747,18 +751,21 @@ async function sendMessage() {
       sources = mock.sources;
       suggestions = mock.suggestions;
     } else {
+      const body = {
+        message: text,
+        conversation_id: state.currentConvId,
+        model_name: state.settings.modelName,
+        search_type: state.settings.searchType,
+        retrieval_k: state.settings.retrievalK,
+        rerank_enabled: state.settings.rerankEnabled,
+        rerank_k: state.settings.rerankK,
+      };
+      if (state.settings.hfToken && state.settings.hfToken !== '__server__') {
+        body.hf_token = state.settings.hfToken;
+      }
       const res = await fetch(`${state.apiBase}/api/chat`, {
         method: 'POST', headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({
-          message: text,
-          conversation_id: state.currentConvId,
-          hf_token: state.settings.hfToken,
-          model_name: state.settings.modelName,
-          search_type: state.settings.searchType,
-          retrieval_k: state.settings.retrievalK,
-          rerank_enabled: state.settings.rerankEnabled,
-          rerank_k: state.settings.rerankK,
-        }),
+        body: JSON.stringify(body),
       });
       if (!res.ok) {
         const errData = await res.json();

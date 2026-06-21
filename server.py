@@ -123,7 +123,12 @@ async def status():
     from rag_engine import load_vector_store
     vs = load_vector_store()
     doc_count = vs.index.ntotal if vs is not None else 0
-    return {"chunks": doc_count, "conversations": len(conversations)}
+    token = os.getenv("HUGGINGFACEHUB_API_TOKEN", "")
+    return {
+        "chunks": doc_count,
+        "conversations": len(conversations),
+        "token_configured": bool(token) and "your_token" not in token,
+    }
 
 @app.post("/api/clear")
 async def clear():
